@@ -74,17 +74,48 @@ class MultiheadAttentionRelationBias(nn.Module):
                 key,
                 value
                 ) -> torch.Tensor:
-        pass
+        query = cuda.as_cuda_array(query)                            ### Might need to name variables differently to
+        key = cuda.as_cuda_array(key)                                ### not overalap with other variables in the class
+        value = cuda.as_cuda_array(value)
+        cuda_q_proj_weight = cuda.as_cuda_array(self.q_proj_weight)
+        cuda_k_proj_weight = cuda.as_cuda_array(self.k_proj_weight)
+        cuda_k_proj_weight = cuda.as_cuda_array(self.v_proj_weight)
+        cuda_relation_bias = cuda.as_cuda_array(self.relation_bias)
+
+        Q = self.project_parallel(query,cuda_q_proj_weight)
+        K_t = self.transpose(self.project_parallel(key, cuda_k_proj_weight))
+        QK_t = self.add_parallel(self.project_parallel(Q,K) , cuda_relation_bias)
+        
+        V = self.transpose(self.project_parallel(cuda_k_proj_weight,value))
+        attention_scores = self.project_parallel(self.softmax(QK_t) , V)
+
+        """
+        NEED TO MAKE ATTENTION SCORES CPU AVAILABLE BEFORE RETURNING
+        """
+        return attention_scores
+        
     
     @cuda.jit
-    def matmul_fast(mat1,
-               mat2):
+    def project_parallel(mat1,
+                        mat2):
         
-        # cuda.as_cuda_array(mat1)
-        # cuda.as_cuda_array(mat2)
+        # mat1 is a 1xm matrix and mat2 is a mxn matrix
 
         row = cuda.threadIdx.x + cuda.blockDim.x * cuda.blockIdx.x
         col = cuda.threadIdx.y + cuda.blockDim.y * cuda.blockIdx.y
         
-        return mat1[row] @ mat2[row]
+        return mat1 @ mat2[row]
 
+    @cuda.jit  
+    def transpose(mat):
+        pass
+
+    @cuda.jit  
+    def add_parallel(vec1,
+                     vec2):
+        pass
+
+    @cuda.jit
+    def softmax(mat,
+                dim):
+        pass
