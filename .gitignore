@@ -1,6 +1,5 @@
 # Environment files
 *.env
-.venv/
 
 # Pycache
 __pycache__/
@@ -10,6 +9,9 @@ __pycache__/
 
 # Visual Studio Code
 .vscode/
+
+# Virtual Environments
+.venv/
 
 # Scripts
 scripts/test.py
